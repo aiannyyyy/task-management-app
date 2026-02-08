@@ -16,8 +16,13 @@ import { Task, TaskStatus } from '../types/task';
 import Navbar from '../components/Navbar';
 import TaskCard from '../components/TaskCard';
 import TaskForm from '../components/TaskForm';
+import TaskDetails from '../components/TaskDetails';
 
-const Dashboard: React.FC = () => {
+interface DashboardProps {
+  onLogout: () => void;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
@@ -26,6 +31,7 @@ const Dashboard: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [viewingTask, setViewingTask] = useState<Task | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -62,12 +68,12 @@ const Dashboard: React.FC = () => {
     localStorage.setItem('darkMode', (!darkMode).toString());
   };
 
-  const handleCreateTask = async (taskData: Omit<Task, '_id' | 'createdAt' | 'updatedAt'>) => {
+  const handleCreateTask = async (taskData: Omit<Task, '_id' | 'createdAt' | 'updatedAt'>, files?: File[]) => {
     try {
       if (editingTask && editingTask._id) {
-        await taskService.updateTask(editingTask._id, taskData);
+        await taskService.updateTask(editingTask._id, taskData, files);
       } else {
-        await taskService.createTask(taskData);
+        await taskService.createTask(taskData, files);
       }
       fetchTasks();
       setShowForm(false);
@@ -80,6 +86,7 @@ const Dashboard: React.FC = () => {
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
     setShowForm(true);
+    setViewingTask(null);
   };
 
   const handleDeleteTask = async (id: string) => {
@@ -91,6 +98,97 @@ const Dashboard: React.FC = () => {
         console.error('Failed to delete task:', error);
       }
     }
+  };
+
+  const handleDeleteAttachment = async (taskId: string, filename: string) => {
+    if (window.confirm('Are you sure you want to delete this attachment?')) {
+      try {
+        await taskService.deleteAttachment(taskId, filename);
+        fetchTasks();
+        // Update viewing task if modal is open
+        if (viewingTask && viewingTask._id === taskId) {
+          const updatedTask = await taskService.getTask(taskId);
+          setViewingTask(updatedTask);
+        }
+      } catch (error) {
+        console.error('Failed to delete attachment:', error);
+      }
+    }
+  };
+
+  const handleAddComment = async (taskId: string, text: string) => {
+    try {
+      const updatedTask = await taskService.addComment(taskId, text);
+      fetchTasks();
+      // Update viewing task if modal is open
+      if (viewingTask && viewingTask._id === taskId) {
+        setViewingTask(updatedTask);
+      }
+    } catch (error) {
+      console.error('Failed to add comment:', error);
+    }
+  };
+
+  const handleDeleteComment = async (taskId: string, commentId: string) => {
+    if (window.confirm('Are you sure you want to delete this comment?')) {
+      try {
+        await taskService.deleteComment(taskId, commentId);
+        fetchTasks();
+        // Update viewing task if modal is open
+        if (viewingTask && viewingTask._id === taskId) {
+          const updatedTask = await taskService.getTask(taskId);
+          setViewingTask(updatedTask);
+        }
+      } catch (error) {
+        console.error('Failed to delete comment:', error);
+      }
+    }
+  };
+
+  const handleAddSubtask = async (taskId: string, text: string) => {
+    try {
+      const updatedTask = await taskService.addSubtask(taskId, text);
+      fetchTasks();
+      // Update viewing task if modal is open
+      if (viewingTask && viewingTask._id === taskId) {
+        setViewingTask(updatedTask);
+      }
+    } catch (error) {
+      console.error('Failed to add subtask:', error);
+    }
+  };
+
+  const handleToggleSubtask = async (taskId: string, subtaskId: string, completed: boolean) => {
+    try {
+      const updatedTask = await taskService.toggleSubtask(taskId, subtaskId, completed);
+      fetchTasks();
+      // Update viewing task if modal is open
+      if (viewingTask && viewingTask._id === taskId) {
+        setViewingTask(updatedTask);
+      }
+    } catch (error) {
+      console.error('Failed to toggle subtask:', error);
+    }
+  };
+
+  const handleDeleteSubtask = async (taskId: string, subtaskId: string) => {
+    if (window.confirm('Are you sure you want to delete this subtask?')) {
+      try {
+        await taskService.deleteSubtask(taskId, subtaskId);
+        fetchTasks();
+        // Update viewing task if modal is open
+        if (viewingTask && viewingTask._id === taskId) {
+          const updatedTask = await taskService.getTask(taskId);
+          setViewingTask(updatedTask);
+        }
+      } catch (error) {
+        console.error('Failed to delete subtask:', error);
+      }
+    }
+  };
+
+  const handleViewDetails = (task: Task) => {
+    setViewingTask(task);
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -140,7 +238,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors">
-      <Navbar darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
+      <Navbar darkMode={darkMode} toggleDarkMode={toggleDarkMode} onLogout={onLogout} />
       
       <div className="max-w-7xl mx-auto px-4 py-8">
         {!showForm ? (
@@ -214,6 +312,8 @@ const Dashboard: React.FC = () => {
                       tasks={tasksByStatus[status]}
                       onEdit={handleEditTask}
                       onDelete={handleDeleteTask}
+                      onDeleteAttachment={handleDeleteAttachment}
+                      onViewDetails={handleViewDetails}
                     />
                   ))}
                 </div>
@@ -245,6 +345,22 @@ const Dashboard: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Task Details Modal */}
+      {viewingTask && (
+        <TaskDetails
+          task={viewingTask}
+          onClose={() => setViewingTask(null)}
+          onEdit={handleEditTask}
+          onDelete={handleDeleteTask}
+          onDeleteAttachment={handleDeleteAttachment}
+          onAddComment={handleAddComment}
+          onDeleteComment={handleDeleteComment}
+          onAddSubtask={handleAddSubtask}
+          onToggleSubtask={handleToggleSubtask}
+          onDeleteSubtask={handleDeleteSubtask}
+        />
+      )}
     </div>
   );
 };
@@ -256,9 +372,19 @@ interface DroppableColumnProps {
   tasks: Task[];
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
+  onDeleteAttachment: (taskId: string, filename: string) => void;
+  onViewDetails: (task: Task) => void;
 }
 
-const DroppableColumn: React.FC<DroppableColumnProps> = ({ id, title, tasks, onEdit, onDelete }) => {
+const DroppableColumn: React.FC<DroppableColumnProps> = ({ 
+  id, 
+  title, 
+  tasks, 
+  onEdit, 
+  onDelete, 
+  onDeleteAttachment,
+  onViewDetails 
+}) => {
   const { setNodeRef, isOver } = useDroppable({ id });
 
   return (
@@ -279,6 +405,8 @@ const DroppableColumn: React.FC<DroppableColumnProps> = ({ id, title, tasks, onE
             task={task}
             onEdit={onEdit}
             onDelete={onDelete}
+            onDeleteAttachment={onDeleteAttachment}
+            onViewDetails={onViewDetails}
           />
         ))}
         
@@ -297,9 +425,17 @@ interface DraggableTaskProps {
   task: Task;
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
+  onDeleteAttachment: (taskId: string, filename: string) => void;
+  onViewDetails: (task: Task) => void;
 }
 
-const DraggableTask: React.FC<DraggableTaskProps> = ({ task, onEdit, onDelete }) => {
+const DraggableTask: React.FC<DraggableTaskProps> = ({ 
+  task, 
+  onEdit, 
+  onDelete, 
+  onDeleteAttachment,
+  onViewDetails 
+}) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task._id!,
   });
@@ -312,7 +448,13 @@ const DraggableTask: React.FC<DraggableTaskProps> = ({ task, onEdit, onDelete })
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <TaskCard task={task} onEdit={onEdit} onDelete={onDelete} />
+      <TaskCard 
+        task={task} 
+        onEdit={onEdit} 
+        onDelete={onDelete} 
+        onDeleteAttachment={onDeleteAttachment}
+        onViewDetails={onViewDetails}
+      />
     </div>
   );
 };
