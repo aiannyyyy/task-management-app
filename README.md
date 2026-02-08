@@ -18,11 +18,14 @@ A full-stack MERN application for managing tasks with drag-and-drop functionalit
 - Tailwind CSS
 - @dnd-kit (drag and drop)
 - Axios
+- Recharts
 
 **Backend:**
 - Node.js with Express
 - MongoDB with Mongoose
 - RESTful API
+- Multer
+- File System
 
 **DevOps:**
 - Docker & Docker Compose
