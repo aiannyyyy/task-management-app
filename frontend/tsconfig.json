@@ -22,5 +22,5 @@
   },
   "include": [
     "src"
-  ]
+, "../backend/services/emailService.js", "../backend/services/notificationScheduler.js"  ]
 }

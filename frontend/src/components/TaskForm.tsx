@@ -18,6 +18,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
     attachments: [] as any[],
     comments: [] as any[],
     substask: [] as any[],
+    history: [] as any[],
     dueDate: '',
   });
   const [newLabel, setNewLabel] = useState('');
@@ -35,6 +36,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
         attachments: task.attachments || [],
         comments: task.comments || [],
         substask: task.subtasks || [],
+        history: task.history || [],
         dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
       });
     }
@@ -52,6 +54,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
       attachments: formData.attachments,
       comments: [],
       subtasks: [],
+      history: [],
       dueDate: formData.dueDate,
     }, selectedFiles);
     
@@ -65,6 +68,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
       attachments: [],
       comments: [],
       substask: [],
+      history: [],
       dueDate: '',
     });
     setSelectedFiles([]);

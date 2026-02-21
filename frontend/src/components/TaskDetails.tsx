@@ -3,6 +3,7 @@ import { Task } from '../types/task';
 import { taskService } from '../services/api';
 import Comments from './Comments';
 import Subtasks from './Subtasks';
+import TaskHistory from './TaskHistory';
 
 interface TaskDetailsProps {
   task: Task;
@@ -207,6 +208,11 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
               onAddComment={(text) => onAddComment(task._id!, text)}
               onDeleteComment={(commentId) => onDeleteComment(task._id!, commentId)}
             />
+          </div>
+
+          {/* History */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+            <TaskHistory history={task.history || []} />
           </div>
         </div>
 

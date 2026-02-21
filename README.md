@@ -26,6 +26,7 @@ A full-stack MERN application for managing tasks with drag-and-drop functionalit
 - RESTful API
 - Multer
 - File System
+- Node Mailer
 
 **DevOps:**
 - Docker & Docker Compose

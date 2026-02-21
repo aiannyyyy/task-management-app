@@ -17,6 +17,7 @@ import Navbar from '../components/Navbar';
 import TaskCard from '../components/TaskCard';
 import TaskForm from '../components/TaskForm';
 import TaskDetails from '../components/TaskDetails';
+import Statistics from '../components/Statistics';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -29,9 +30,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>('all');
+  const [sortBy, setSortBy] = useState<'none' | 'priority' | 'dueDate' | 'createdAt'>('none');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
+  const [showStatistics, setShowStatistics] = useState(false);
+  
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -216,6 +221,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     }
   };
 
+  // Filter tasks by status and search query
   const filteredTasks = tasks.filter(task => {
     const matchesStatus = filterStatus === 'all' || task.status === filterStatus;
     const matchesSearch = searchQuery === '' || 
@@ -224,10 +230,45 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     return matchesStatus && matchesSearch;
   });
 
+  // Sort filtered tasks
+  const sortTasks = (tasksToSort: Task[]) => {
+    if (sortBy === 'none') return tasksToSort;
+
+    return [...tasksToSort].sort((a, b) => {
+      let compareValue = 0;
+
+      switch (sortBy) {
+        case 'priority':
+          const priorityOrder = { high: 3, medium: 2, low: 1 };
+          compareValue = priorityOrder[a.priority] - priorityOrder[b.priority];
+          break;
+
+        case 'dueDate':
+          const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+          const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+          compareValue = aDate - bDate;
+          break;
+
+        case 'createdAt':
+          const aCreated = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bCreated = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          compareValue = aCreated - bCreated;
+          break;
+
+        default:
+          compareValue = 0;
+      }
+
+      return sortOrder === 'asc' ? compareValue : -compareValue;
+    });
+  };
+
+  const sortedTasks = sortTasks(filteredTasks);
+
   const tasksByStatus = {
-    todo: filteredTasks.filter(t => t.status === 'todo'),
-    'in-progress': filteredTasks.filter(t => t.status === 'in-progress'),
-    done: filteredTasks.filter(t => t.status === 'done'),
+    todo: sortedTasks.filter(t => t.status === 'todo'),
+    'in-progress': sortedTasks.filter(t => t.status === 'in-progress'),
+    done: sortedTasks.filter(t => t.status === 'done'),
   };
 
   const statusLabels = {
@@ -247,50 +288,146 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
                 My Tasks
               </h2>
-              <button
-                onClick={() => {
-                  setEditingTask(null);
-                  setShowForm(true);
-                }}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
-              >
-                + New Task
-              </button>
-            </div>
-
-            <div className="mb-6 flex gap-4 flex-wrap">
-              <div className="flex-1 min-w-[200px]">
-                <input
-                  type="text"
-                  placeholder="🔍 Search tasks..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              </div>
-              
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as TaskStatus | 'all')}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              >
-                <option value="all">All Tasks</option>
-                <option value="todo">To Do</option>
-                <option value="in-progress">In Progress</option>
-                <option value="done">Done</option>
-              </select>
-              
-              {(searchQuery || filterStatus !== 'all') && (
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowStatistics(true)}
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+                >
+                  📊 Statistics
+                </button>
                 <button
                   onClick={() => {
-                    setSearchQuery('');
-                    setFilterStatus('all');
+                    setEditingTask(null);
+                    setShowForm(true);
                   }}
-                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
                 >
-                  Clear Filters
+                  + New Task
                 </button>
-              )}
+              </div>
+            </div>
+
+            <div className="mb-6 space-y-4">
+              {/* Search and Filter Row */}
+              <div className="flex gap-4 flex-wrap">
+                <div className="flex-1 min-w-[200px]">
+                  <input
+                    type="text"
+                    placeholder="🔍 Search tasks..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+                
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value as TaskStatus | 'all')}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                >
+                  <option value="all">All Tasks</option>
+                  <option value="todo">To Do</option>
+                  <option value="in-progress">In Progress</option>
+                  <option value="done">Done</option>
+                </select>
+                
+                {(searchQuery || filterStatus !== 'all' || sortBy !== 'none') && (
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      setFilterStatus('all');
+                      setSortBy('none');
+                    }}
+                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
+
+              {/* Sorting Row */}
+              <div className="flex items-center gap-4 flex-wrap">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Sort by:
+                </span>
+                
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      if (sortBy === 'priority') {
+                        setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                      } else {
+                        setSortBy('priority');
+                        setSortOrder('desc');
+                      }
+                    }}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      sortBy === 'priority'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    🔥 Priority {sortBy === 'priority' && (sortOrder === 'desc' ? '↓' : '↑')}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (sortBy === 'dueDate') {
+                        setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                      } else {
+                        setSortBy('dueDate');
+                        setSortOrder('asc');
+                      }
+                    }}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      sortBy === 'dueDate'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    📅 Due Date {sortBy === 'dueDate' && (sortOrder === 'asc' ? '↑' : '↓')}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (sortBy === 'createdAt') {
+                        setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                      } else {
+                        setSortBy('createdAt');
+                        setSortOrder('desc');
+                      }
+                    }}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      sortBy === 'createdAt'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    🕐 Created {sortBy === 'createdAt' && (sortOrder === 'desc' ? '↓' : '↑')}
+                  </button>
+
+                  {sortBy !== 'none' && (
+                    <button
+                      onClick={() => setSortBy('none')}
+                      className="px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                    >
+                      ✕ Clear Sort
+                    </button>
+                  )}
+                </div>
+
+                {sortBy !== 'none' && (
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Sorted by{' '}
+                    <span className="font-medium">
+                      {sortBy === 'priority' && 'Priority'}
+                      {sortBy === 'dueDate' && 'Due Date'}
+                      {sortBy === 'createdAt' && 'Created Date'}
+                    </span>
+                    {' '}({sortOrder === 'asc' ? 'ascending' : 'descending'})
+                  </div>
+                )}
+              </div>
             </div>
 
             {loading ? (
@@ -359,6 +496,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
           onAddSubtask={handleAddSubtask}
           onToggleSubtask={handleToggleSubtask}
           onDeleteSubtask={handleDeleteSubtask}
+        />
+      )}
+
+      {/* Statistics Modal */}
+      {showStatistics && (
+        <Statistics
+          tasks={tasks}
+          onClose={() => setShowStatistics(false)}
         />
       )}
     </div>

@@ -37,6 +37,81 @@ const subtaskSchema = new mongoose.Schema({
   }
 });
 
+const historySchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  userName: {
+    type: String,
+    required: true
+  },
+  action: {
+    type: String,
+    required: true,
+    enum: [
+      'created',
+      'updated',
+      'status_changed',
+      'priority_changed',
+      'due_date_changed',
+      'comment_added',
+      'comment_deleted',
+      'attachment_added',
+      'attachment_deleted',
+      'subtask_added',
+      'subtask_completed',
+      'subtask_uncompleted',
+      'subtask_deleted',
+      'label_added',
+      'label_removed',
+      'recurrence_added',
+      'recurrence_removed'
+    ]
+  },
+  field: {
+    type: String,
+  },
+  oldValue: {
+    type: mongoose.Schema.Types.Mixed,
+  },
+  newValue: {
+    type: mongoose.Schema.Types.Mixed,
+  },
+  description: {
+    type: String,
+    required: true
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+const recurrenceSchema = new mongoose.Schema({
+  frequency: {
+    type: String,
+    enum: ['daily', 'weekly', 'monthly', 'yearly'],
+    required: true
+  },
+  interval: {
+    type: Number,
+    default: 1,
+    min: 1
+  },
+  daysOfWeek: {
+    type: [Number], // 0 = Sunday, 1 = Monday, etc.
+    default: []
+  },
+  endDate: {
+    type: Date
+  },
+  lastGenerated: {
+    type: Date
+  }
+});
+
 const taskSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
@@ -97,8 +172,18 @@ const taskSchema = new mongoose.Schema({
   }],
   comments: [commentSchema],
   subtasks: [subtaskSchema],
+  history: [historySchema],
   dueDate: {
     type: Date
+  },
+  recurrence: recurrenceSchema,
+  isRecurring: {
+    type: Boolean,
+    default: false
+  },
+  parentTask: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Task'
   }
 }, {
   timestamps: true

@@ -161,12 +161,17 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit, onDelete, onDeleteAtt
         </div>
       </div>
 
-      {/* Show comment count and due date */}
+      {/* Show comment count, history, and due date */}
       <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-        <div>
+        <div className="flex items-center gap-3">
           {task.comments && task.comments.length > 0 && (
             <span>
-              💬 {task.comments.length} {task.comments.length === 1 ? 'comment' : 'comments'}
+              💬 {task.comments.length}
+            </span>
+          )}
+          {task.history && task.history.length > 0 && (
+            <span>
+              📜 {task.history.length} {task.history.length === 1 ? 'change' : 'changes'}
             </span>
           )}
         </div>

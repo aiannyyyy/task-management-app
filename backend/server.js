@@ -3,11 +3,15 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 const connectDB = require('./config/db');
+const { startNotificationScheduler } = require('./services/notificationScheduler');
 
 const app = express();
 
 // Connect to Database
 connectDB();
+
+// Start notification scheduler
+startNotificationScheduler();
 
 // Middleware
 app.use(cors());
