@@ -31,6 +31,7 @@ app.get('/api', (req, res) => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/tasks', require('./routes/tasks'));
 app.use('/api/items', require('./routes/items'));
+app.use('/api/workspaces', require('./routes/workspaces')); // ← Team collaboration
 
 // Start Server
 const PORT = process.env.PORT || 5000;

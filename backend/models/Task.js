@@ -1,184 +1,115 @@
 const mongoose = require('mongoose');
 
 const commentSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  userName: {
-    type: String,
-    required: true
-  },
-  text: {
-    type: String,
-    required: true,
-    maxlength: 500
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  userName: { type: String, required: true },
+  text: { type: String, required: true, maxlength: 500 },
+  createdAt: { type: Date, default: Date.now },
 });
 
 const subtaskSchema = new mongoose.Schema({
-  text: {
-    type: String,
-    required: true,
-    maxlength: 200
-  },
-  completed: {
-    type: Boolean,
-    default: false
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
+  text: { type: String, required: true, maxlength: 200 },
+  completed: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now },
 });
 
 const historySchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  userName: {
-    type: String,
-    required: true
-  },
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  userName: { type: String, required: true },
   action: {
     type: String,
     required: true,
     enum: [
-      'created',
-      'updated',
-      'status_changed',
-      'priority_changed',
-      'due_date_changed',
-      'comment_added',
-      'comment_deleted',
-      'attachment_added',
-      'attachment_deleted',
-      'subtask_added',
-      'subtask_completed',
-      'subtask_uncompleted',
-      'subtask_deleted',
-      'label_added',
-      'label_removed',
-      'recurring_updated'
-    ]
+      'created', 'updated', 'status_changed', 'priority_changed',
+      'due_date_changed', 'comment_added', 'comment_deleted',
+      'attachment_added', 'attachment_deleted', 'subtask_added',
+      'subtask_completed', 'subtask_uncompleted', 'subtask_deleted',
+      'label_added', 'label_removed', 'recurring_updated',
+      'assigned', 'unassigned',       // ← new
+    ],
   },
-  field: {
-    type: String,
-  },
-  oldValue: {
-    type: mongoose.Schema.Types.Mixed,
-  },
-  newValue: {
-    type: mongoose.Schema.Types.Mixed,
-  },
-  description: {
-    type: String,
-    required: true
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
+  field: { type: String },
+  oldValue: { type: mongoose.Schema.Types.Mixed },
+  newValue: { type: mongoose.Schema.Types.Mixed },
+  description: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now },
 });
 
-const taskSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-  },
-  title: {
-    type: String,
-    required: [true, 'Please add a title'],
-    trim: true,
-    maxlength: [100, 'Title cannot be more than 100 characters']
-  },
-  description: {
-    type: String,
-    trim: true,
-    maxlength: [500, 'Description cannot be more than 500 characters']
-  },
-  status: {
-    type: String,
-    enum: ['todo', 'in-progress', 'done'],
-    default: 'todo'
-  },
-  priority: {
-    type: String,
-    enum: ['low', 'medium', 'high'],
-    default: 'medium'
-  },
-  category: {
-    type: String,
-    enum: ['work', 'personal', 'shopping', 'health', 'other'],
-    default: 'other'
-  },
-  labels: {
-    type: [String],
-    default: []
-  },
-  attachments: [{
-    filename: {
+const taskSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+
+    // ── Team collaboration ──────────────────────────────
+    workspace: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Workspace',
+      default: null,
+    },
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    // ───────────────────────────────────────────────────
+
+    title: {
       type: String,
-      required: true
+      required: [true, 'Please add a title'],
+      trim: true,
+      maxlength: [100, 'Title cannot be more than 100 characters'],
     },
-    originalName: {
+    description: {
       type: String,
-      required: true
+      trim: true,
+      maxlength: [500, 'Description cannot be more than 500 characters'],
     },
-    mimetype: {
+    status: {
       type: String,
-      required: true
+      enum: ['todo', 'in-progress', 'done'],
+      default: 'todo',
     },
-    size: {
-      type: Number,
-      required: true
+    priority: {
+      type: String,
+      enum: ['low', 'medium', 'high'],
+      default: 'medium',
     },
-    uploadedAt: {
-      type: Date,
-      default: Date.now
-    }
-  }],
-  comments: [commentSchema],
-  subtasks: [subtaskSchema],
-  history: [historySchema],
-  dueDate: {
-    type: Date
+    category: {
+      type: String,
+      enum: ['work', 'personal', 'shopping', 'health', 'other'],
+      default: 'other',
+    },
+    labels: { type: [String], default: [] },
+    attachments: [
+      {
+        filename: { type: String, required: true },
+        originalName: { type: String, required: true },
+        mimetype: { type: String, required: true },
+        size: { type: Number, required: true },
+        uploadedAt: { type: Date, default: Date.now },
+      },
+    ],
+    comments: [commentSchema],
+    subtasks: [subtaskSchema],
+    history: [historySchema],
+    dueDate: { type: Date },
+
+    // Recurring
+    isRecurring: { type: Boolean, default: false },
+    recurringPattern: {
+      type: String,
+      enum: ['daily', 'weekly', 'monthly', 'none'],
+      default: 'none',
+    },
+    recurringInterval: { type: Number, default: 1, min: 1 },
+    recurringEndDate: { type: Date },
+    lastRecurredDate: { type: Date },
+    parentTaskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task' },
   },
-  // Recurring task fields
-  isRecurring: {
-    type: Boolean,
-    default: false
-  },
-  recurringPattern: {
-    type: String,
-    enum: ['daily', 'weekly', 'monthly', 'none'],
-    default: 'none'
-  },
-  recurringInterval: {
-    type: Number,
-    default: 1, // Every 1 day/week/month
-    min: 1
-  },
-  recurringEndDate: {
-    type: Date
-  },
-  lastRecurredDate: {
-    type: Date
-  },
-  parentTaskId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Task'
-  }
-}, {
-  timestamps: true
-});
+  { timestamps: true }
+);
 
 module.exports = mongoose.model('Task', taskSchema);
