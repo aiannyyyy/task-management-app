@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Workspace, WorkspaceMember } from '../types/workspace';
+import { Workspace } from '../types/workspace';
 import { workspaceService } from '../services/api';
 import { authService } from '../services/authService';
 

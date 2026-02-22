@@ -50,7 +50,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     setDarkMode(savedDarkMode);
     if (savedDarkMode) document.documentElement.classList.add('dark');
     fetchWorkspaces();
-  }, []);
+  }, [fetchWorkspaces]);
 
   useEffect(() => {
     fetchTasks();
