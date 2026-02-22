@@ -28,9 +28,17 @@ A full-stack task management application for creating, organizing, and tracking 
 - MongoDB (database)  
 - Docker support
 
-### TEST (ONGOING)
+### TEST
 - JEST
 - SUPERTEST
+
+### DEPLOYMENT
+- MONGO DB ATLAS
+- RAILWAY
+- VERCEL
+
+### LINK TRY
+- Contact Me if you want to try my test link of the task management app
 
 ## 🔧 Prerequisites
 
