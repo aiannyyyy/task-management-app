@@ -14,6 +14,7 @@ import TaskDetails from '../components/TaskDetails';
 import Statistics from '../components/Statistics';
 import WorkspacePanel from '../components/WorkspacePanel';
 import CalendarView from '../components/CalendarView';
+import ExportImport from '../components/ExportImport';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -33,6 +34,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
   const [showStatistics, setShowStatistics] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [showExportImport, setShowExportImport] = useState(false);
 
   // Workspace state
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -284,6 +286,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
               <div className="flex gap-3">
                 <button
+                  onClick={() => setShowExportImport(true)}
+                  className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+                >
+                  📦 Export / Import
+                </button>
+                <button
                   onClick={() => setShowCalendar(true)}
                   className="bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
                 >
@@ -436,6 +444,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
           tasks={tasks}
           onViewTask={(task) => { setShowCalendar(false); setViewingTask(task); }}
           onClose={() => setShowCalendar(false)}
+        />
+      )}
+
+      {showExportImport && (
+        <ExportImport
+          tasks={tasks}
+          onImportComplete={() => { fetchTasks(); }}
+          onClose={() => setShowExportImport(false)}
         />
       )}
     </div>
