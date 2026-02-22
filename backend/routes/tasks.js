@@ -17,12 +17,13 @@ router.use(protect);
 //   (a) it belongs to the current user, OR
 //   (b) it belongs to a workspace the current user is a member of
 const canAccessTask = async (task, userId) => {
-  if (task.user.toString() === userId.toString()) return true;
-  if (task.workspace) {
-    const ws = await Workspace.findById(task.workspace);
-    if (ws && ws.isMember(userId)) return true;
-  }
-  return false;
+  const taskUserId = task.user._id || task.user;
+  if (taskUserId.toString() === userId.toString()) return true;
+    if (task.workspace) {
+      const ws = await Workspace.findById(task.workspace);
+      if (ws && ws.isMember(userId)) return true;
+    }
+    return false;
 };
 
 // ─── GET all tasks ───────────────────────────────────────────────────────────
