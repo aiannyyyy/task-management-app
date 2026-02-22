@@ -4,14 +4,16 @@ const path = require('path');
 require('dotenv').config();
 const connectDB = require('./config/db');
 const { startNotificationScheduler } = require('./services/notificationScheduler');
+const { startRecurringTaskScheduler } = require('./services/recurringTaskService');
 
 const app = express();
 
 // Connect to Database
 connectDB();
 
-// Start notification scheduler
+// Start schedulers
 startNotificationScheduler();
+startRecurringTaskScheduler();
 
 // Middleware
 app.use(cors());

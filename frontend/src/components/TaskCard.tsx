@@ -23,12 +23,8 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit, onDelete, onDeleteAtt
     'done': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
   };
 
-  const categoryIcons = {
-    work: '💼',
-    personal: '👤',
-    shopping: '🛒',
-    health: '🏥',
-    other: '📌',
+  const categoryIcons: Record<string, string> = {
+    work: '💼', personal: '👤', shopping: '🛒', health: '🏥', other: '📌',
   };
 
   const getFileIcon = (mimetype: string): string => {
@@ -57,22 +53,44 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit, onDelete, onDeleteAtt
     document.body.removeChild(link);
   };
 
+  const getRecurringLabel = (): string | null => {
+    if (!task.isRecurring || !task.recurringPattern || task.recurringPattern === 'none') return null;
+    const interval = task.recurringInterval ?? 1;
+    if (interval === 1) {
+      return task.recurringPattern.charAt(0).toUpperCase() + task.recurringPattern.slice(1);
+    }
+    const unit = task.recurringPattern === 'daily' ? 'd' : task.recurringPattern === 'weekly' ? 'w' : 'mo';
+    return `Every ${interval}${unit}`;
+  };
+
+  const recurringLabel = getRecurringLabel();
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow">
+      {/* Title row */}
       <div className="flex justify-between items-start mb-2">
-        <div className="flex items-center gap-2 flex-1">
-          <span className="text-xl">{categoryIcons[task.category]}</span>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <span className="text-xl flex-shrink-0">{categoryIcons[task.category]}</span>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
             {task.title}
           </h3>
+          {/* Recurring badge */}
+          {recurringLabel && (
+            <span
+              className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full text-xs font-medium"
+              title={`Recurring: ${task.recurringPattern}, every ${task.recurringInterval ?? 1}`}
+            >
+              🔁 {recurringLabel}
+            </span>
+          )}
         </div>
-        <span className={`px-2 py-1 rounded text-xs font-medium ${priorityColors[task.priority]}`}>
+        <span className={`flex-shrink-0 ml-2 px-2 py-1 rounded text-xs font-medium ${priorityColors[task.priority]}`}>
           {task.priority}
         </span>
       </div>
-      
+
       {task.description && (
-        <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">
+        <p className="text-gray-600 dark:text-gray-400 text-sm mb-3 line-clamp-2">
           {task.description}
         </p>
       )}
@@ -80,10 +98,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit, onDelete, onDeleteAtt
       {task.labels && task.labels.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-3">
           {task.labels.map((label, index) => (
-            <span
-              key={index}
-              className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded text-xs"
-            >
+            <span key={index} className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded text-xs">
               {label}
             </span>
           ))}
@@ -131,54 +146,43 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit, onDelete, onDeleteAtt
           )}
         </div>
       )}
-      
+
+      {/* Status row */}
       <div className="flex items-center justify-between">
         <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[task.status]}`}>
           {task.status.replace('-', ' ')}
         </span>
-        
         <div className="flex gap-2">
           {onViewDetails && (
-            <button
-              onClick={() => onViewDetails(task)}
-              className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 text-sm font-medium"
-            >
+            <button onClick={() => onViewDetails(task)} className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 text-sm font-medium">
               View
             </button>
           )}
-          <button
-            onClick={() => onEdit(task)}
-            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium"
-          >
+          <button onClick={() => onEdit(task)} className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium">
             Edit
           </button>
-          <button
-            onClick={() => task._id && onDelete(task._id)}
-            className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-sm font-medium"
-          >
+          <button onClick={() => task._id && onDelete(task._id)} className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-sm font-medium">
             Delete
           </button>
         </div>
       </div>
 
-      {/* Show comment count, history, and due date */}
+      {/* Footer meta */}
       <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
         <div className="flex items-center gap-3">
           {task.comments && task.comments.length > 0 && (
-            <span>
-              💬 {task.comments.length}
-            </span>
+            <span>💬 {task.comments.length}</span>
           )}
           {task.history && task.history.length > 0 && (
-            <span>
-              📜 {task.history.length} {task.history.length === 1 ? 'change' : 'changes'}
-            </span>
+            <span>📜 {task.history.length} {task.history.length === 1 ? 'change' : 'changes'}</span>
+          )}
+          {/* Child task indicator */}
+          {task.parentTaskId && (
+            <span title="This is a recurring child task">🔗 Recurring copy</span>
           )}
         </div>
         {task.dueDate && (
-          <span>
-            📅 Due: {new Date(task.dueDate).toLocaleDateString()}
-          </span>
+          <span>📅 Due: {new Date(task.dueDate).toLocaleDateString()}</span>
         )}
       </div>
     </div>

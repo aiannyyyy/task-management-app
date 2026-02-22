@@ -6,7 +6,7 @@ const upload = require('../config/multer');
 const path = require('path');
 const fs = require('fs');
 const { addHistory, getStatusLabel, getPriorityLabel, formatDate } = require('../utils/taskHistory');
-const { generateNextOccurrence } = require('../services/recurrenceService');
+const { generateNextOccurrence } = require('../services/recurringTaskService');
 
 // Apply protect middleware to all routes
 router.use(protect);
@@ -53,9 +53,22 @@ router.post('/', upload.array('files', 5), async (req, res) => {
       category: req.body.category,
       labels: req.body.labels ? JSON.parse(req.body.labels) : [],
       attachments: attachments,
-      dueDate: req.body.dueDate
+      dueDate: req.body.dueDate,
+      isRecurring: req.body.isRecurring === 'true' || req.body.isRecurring === true,
+      recurringPattern: req.body.recurringPattern || 'none',
+      recurringInterval: parseInt(req.body.recurringInterval) || 1,
+      recurringEndDate: req.body.recurringEndDate || null,
     });
-    
+
+    // Add creation history
+    addHistory(task, req.user, 'created', `Created task "${task.title}"`);
+
+    if (task.isRecurring && task.recurringPattern !== 'none') {
+      addHistory(task, req.user, 'recurring_updated',
+        `Set as recurring task (${task.recurringPattern}, every ${task.recurringInterval} ${task.recurringPattern === 'daily' ? 'day(s)' : task.recurringPattern === 'weekly' ? 'week(s)' : 'month(s)'})`
+      );
+    }
+
     const newTask = await task.save();
     res.status(201).json(newTask);
   } catch (error) {
@@ -70,9 +83,6 @@ router.put('/:id', upload.array('files', 5), async (req, res) => {
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
-
-    // Track changes
-    const changes = [];
 
     // Check title change
     if (req.body.title && req.body.title !== task.title) {
@@ -89,9 +99,9 @@ router.put('/:id', upload.array('files', 5), async (req, res) => {
     // Check status change
     if (req.body.status && req.body.status !== task.status) {
       addHistory(
-        task, 
-        req.user, 
-        'status_changed', 
+        task,
+        req.user,
+        'status_changed',
         `Changed status from ${getStatusLabel(task.status)} to ${getStatusLabel(req.body.status)}`,
         'status',
         task.status,
@@ -103,9 +113,9 @@ router.put('/:id', upload.array('files', 5), async (req, res) => {
     // Check priority change
     if (req.body.priority && req.body.priority !== task.priority) {
       addHistory(
-        task, 
-        req.user, 
-        'priority_changed', 
+        task,
+        req.user,
+        'priority_changed',
         `Changed priority from ${getPriorityLabel(task.priority)} to ${getPriorityLabel(req.body.priority)}`,
         'priority',
         task.priority,
@@ -124,18 +134,18 @@ router.put('/:id', upload.array('files', 5), async (req, res) => {
     if (req.body.labels) {
       const newLabels = JSON.parse(req.body.labels);
       const oldLabels = task.labels;
-      
+
       const added = newLabels.filter(l => !oldLabels.includes(l));
       const removed = oldLabels.filter(l => !newLabels.includes(l));
-      
+
       added.forEach(label => {
         addHistory(task, req.user, 'label_added', `Added label "${label}"`);
       });
-      
+
       removed.forEach(label => {
         addHistory(task, req.user, 'label_removed', `Removed label "${label}"`);
       });
-      
+
       task.labels = newLabels;
     }
 
@@ -143,14 +153,14 @@ router.put('/:id', upload.array('files', 5), async (req, res) => {
     if (req.body.dueDate !== undefined) {
       const newDueDate = req.body.dueDate || null;
       const oldDueDate = task.dueDate;
-      
+
       if (String(newDueDate) !== String(oldDueDate)) {
-        const description = newDueDate 
-          ? oldDueDate 
+        const description = newDueDate
+          ? oldDueDate
             ? `Changed due date from ${formatDate(oldDueDate)} to ${formatDate(newDueDate)}`
             : `Set due date to ${formatDate(newDueDate)}`
           : `Removed due date`;
-        
+
         addHistory(task, req.user, 'due_date_changed', description, 'dueDate', oldDueDate, newDueDate);
         task.dueDate = newDueDate;
       }
@@ -164,12 +174,38 @@ router.put('/:id', upload.array('files', 5), async (req, res) => {
         mimetype: file.mimetype,
         size: file.size
       }));
-      
+
       newAttachments.forEach(att => {
         addHistory(task, req.user, 'attachment_added', `Added attachment "${att.originalName}"`);
       });
-      
+
       task.attachments = [...task.attachments, ...newAttachments];
+    }
+
+    // Check recurring changes
+    if (req.body.isRecurring !== undefined) {
+      const newIsRecurring = req.body.isRecurring === 'true' || req.body.isRecurring === true;
+      if (newIsRecurring !== task.isRecurring) {
+        task.isRecurring = newIsRecurring;
+        addHistory(task, req.user, 'recurring_updated',
+          newIsRecurring ? 'Enabled recurring' : 'Disabled recurring'
+        );
+      }
+    }
+
+    if (req.body.recurringPattern && req.body.recurringPattern !== task.recurringPattern) {
+      addHistory(task, req.user, 'recurring_updated',
+        `Changed recurring pattern from ${task.recurringPattern} to ${req.body.recurringPattern}`
+      );
+      task.recurringPattern = req.body.recurringPattern;
+    }
+
+    if (req.body.recurringInterval) {
+      task.recurringInterval = parseInt(req.body.recurringInterval);
+    }
+
+    if (req.body.recurringEndDate !== undefined) {
+      task.recurringEndDate = req.body.recurringEndDate || null;
     }
 
     const updatedTask = await task.save();
@@ -188,7 +224,7 @@ router.delete('/:id/attachments/:filename', async (req, res) => {
     }
 
     const attachment = task.attachments.find(att => att.filename === req.params.filename);
-    
+
     // Remove attachment from task
     task.attachments = task.attachments.filter(
       att => att.filename !== req.params.filename
@@ -251,10 +287,10 @@ router.post('/:id/comments', async (req, res) => {
     };
 
     task.comments.push(comment);
-    
+
     // Add history
     addHistory(task, req.user, 'comment_added', `Added a comment`);
-    
+
     await task.save();
 
     res.status(201).json(task);
@@ -281,10 +317,10 @@ router.delete('/:id/comments/:commentId', async (req, res) => {
     }
 
     task.comments.pull(req.params.commentId);
-    
+
     // Add history
     addHistory(task, req.user, 'comment_deleted', `Deleted a comment`);
-    
+
     await task.save();
 
     res.json({ message: 'Comment deleted successfully' });
@@ -330,10 +366,10 @@ router.post('/:id/subtasks', async (req, res) => {
     };
 
     task.subtasks.push(subtask);
-    
+
     // Add history
     addHistory(task, req.user, 'subtask_added', `Added subtask "${req.body.text}"`);
-    
+
     await task.save();
 
     res.status(201).json(task);
@@ -355,17 +391,16 @@ router.put('/:id/subtasks/:subtaskId', async (req, res) => {
       return res.status(404).json({ message: 'Subtask not found' });
     }
 
-    const oldCompleted = subtask.completed;
     subtask.completed = req.body.completed;
-    
+
     // Add history
     const action = req.body.completed ? 'subtask_completed' : 'subtask_uncompleted';
-    const description = req.body.completed 
+    const description = req.body.completed
       ? `Completed subtask "${subtask.text}"`
       : `Uncompleted subtask "${subtask.text}"`;
-    
+
     addHistory(task, req.user, action, description);
-    
+
     await task.save();
 
     res.json(task);
@@ -405,7 +440,7 @@ router.post('/:id/notify', async (req, res) => {
     }
 
     const { sendDueDateReminder } = require('../services/emailService');
-    
+
     const dueDate = new Date(task.dueDate);
     const today = new Date();
     const diffTime = dueDate - today;
@@ -416,38 +451,6 @@ router.post('/:id/notify', async (req, res) => {
     res.json({ message: 'Notification sent successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
-  }
-});
-
-// CREATE task with file upload
-router.post('/', upload.array('files', 5), async (req, res) => {
-  try {
-    const attachments = req.files ? req.files.map(file => ({
-      filename: file.filename,
-      originalName: file.originalname,
-      mimetype: file.mimetype,
-      size: file.size
-    })) : [];
-
-    const task = new Task({
-      user: req.user._id,
-      title: req.body.title,
-      description: req.body.description,
-      status: req.body.status,
-      priority: req.body.priority,
-      category: req.body.category,
-      labels: req.body.labels ? JSON.parse(req.body.labels) : [],
-      attachments: attachments,
-      dueDate: req.body.dueDate
-    });
-
-    // Add creation history
-    addHistory(task, req.user, 'created', `Created task "${task.title}"`);
-    
-    const newTask = await task.save();
-    res.status(201).json(newTask);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
   }
 });
 
@@ -475,7 +478,7 @@ router.put('/:id/recurrence', async (req, res) => {
         daysOfWeek: daysOfWeek || [],
         endDate: endDate || null
       };
-      
+
       const desc = `Set recurrence: ${frequency}${interval > 1 ? ` (every ${interval})` : ''}`;
       addHistory(task, req.user, 'recurrence_added', desc);
     }
@@ -500,7 +503,7 @@ router.post('/:id/generate-next', async (req, res) => {
     }
 
     const newTask = await generateNextOccurrence(task, req.user);
-    
+
     if (!newTask) {
       return res.status(400).json({ message: 'Could not generate next occurrence' });
     }

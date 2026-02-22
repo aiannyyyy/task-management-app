@@ -42,12 +42,8 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
     'done': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
   };
 
-  const categoryIcons = {
-    work: '💼',
-    personal: '👤',
-    shopping: '🛒',
-    health: '🏥',
-    other: '📌',
+  const categoryIcons: Record<string, string> = {
+    work: '💼', personal: '👤', shopping: '🛒', health: '🏥', other: '📌',
   };
 
   const getFileIcon = (mimetype: string): string => {
@@ -76,19 +72,39 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
     document.body.removeChild(link);
   };
 
+  const getRecurringSummary = (): string => {
+    if (!task.isRecurring || !task.recurringPattern || task.recurringPattern === 'none') return '';
+    const interval = task.recurringInterval ?? 1;
+    const patternLabel: Record<string, string> = {
+      daily: interval === 1 ? 'Daily' : `Every ${interval} days`,
+      weekly: interval === 1 ? 'Weekly' : `Every ${interval} weeks`,
+      monthly: interval === 1 ? 'Monthly' : `Every ${interval} months`,
+    };
+    return patternLabel[task.recurringPattern] ?? task.recurringPattern;
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+
         {/* Header */}
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3 flex-1">
               <span className="text-3xl">{categoryIcons[task.category]}</span>
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {task.title}
-                </h2>
-                <div className="flex gap-2 mt-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {task.title}
+                  </h2>
+                  {/* Recurring badge in header */}
+                  {task.isRecurring && task.recurringPattern !== 'none' && (
+                    <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full text-xs font-medium flex items-center gap-1">
+                      🔁 {getRecurringSummary()}
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-2 mt-2 flex-wrap">
                   <span className={`px-3 py-1 rounded text-xs font-medium ${statusColors[task.status]}`}>
                     {task.status.replace('-', ' ')}
                   </span>
@@ -98,10 +114,7 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
                 </div>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl"
-            >
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl">
               ×
             </button>
           </div>
@@ -109,6 +122,7 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
 
         {/* Body */}
         <div className="p-6 space-y-6">
+
           {/* Description */}
           {task.description && (
             <div>
@@ -123,10 +137,7 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
               <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Labels</h3>
               <div className="flex flex-wrap gap-2">
                 {task.labels.map((label, index) => (
-                  <span
-                    key={index}
-                    className="px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full text-sm"
-                  >
+                  <span key={index} className="px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full text-sm">
                     {label}
                   </span>
                 ))}
@@ -139,13 +150,69 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
             <div>
               <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Due Date</h3>
               <p className="text-gray-700 dark:text-gray-300">
-                {new Date(task.dueDate).toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
+                {new Date(task.dueDate).toLocaleDateString('en-US', {
+                  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
                 })}
               </p>
+            </div>
+          )}
+
+          {/* ── Recurring Info ── */}
+          {task.isRecurring && task.recurringPattern && task.recurringPattern !== 'none' && (
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Recurring Schedule</h3>
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-blue-500 text-lg">🔁</span>
+                  <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                    {getRecurringSummary()}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-blue-700 dark:text-blue-300 pl-7">
+                  <span className="text-blue-500 dark:text-blue-400">Pattern</span>
+                  <span className="capitalize font-medium">{task.recurringPattern}</span>
+
+                  <span className="text-blue-500 dark:text-blue-400">Interval</span>
+                  <span className="font-medium">
+                    Every {task.recurringInterval ?? 1}{' '}
+                    {task.recurringPattern === 'daily' ? 'day(s)' : task.recurringPattern === 'weekly' ? 'week(s)' : 'month(s)'}
+                  </span>
+
+                  {task.recurringEndDate && (
+                    <>
+                      <span className="text-blue-500 dark:text-blue-400">Ends on</span>
+                      <span className="font-medium">
+                        {new Date(task.recurringEndDate).toLocaleDateString('en-US', {
+                          year: 'numeric', month: 'long', day: 'numeric',
+                        })}
+                      </span>
+                    </>
+                  )}
+
+                  {task.lastRecurredDate && (
+                    <>
+                      <span className="text-blue-500 dark:text-blue-400">Last spawned</span>
+                      <span className="font-medium">
+                        {new Date(task.lastRecurredDate).toLocaleDateString()}
+                      </span>
+                    </>
+                  )}
+
+                  {task.parentTaskId && (
+                    <>
+                      <span className="text-blue-500 dark:text-blue-400">Origin</span>
+                      <span className="font-medium text-xs font-mono truncate">#{task.parentTaskId}</span>
+                    </>
+                  )}
+                </div>
+
+                {task.status !== 'done' && (
+                  <p className="text-xs text-blue-600 dark:text-blue-400 pl-7 mt-1">
+                    ℹ️ A new task will be created automatically once this one is marked as done.
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
@@ -161,12 +228,8 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <span className="text-2xl">{getFileIcon(attachment.mimetype)}</span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                          {attachment.originalName}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {formatFileSize(attachment.size)}
-                        </p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{attachment.originalName}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{formatFileSize(attachment.size)}</p>
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -188,7 +251,7 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
                   </div>
                 ))}
               </div>
-            </div>            
+            </div>
           )}
 
           {/* Subtasks */}
@@ -225,10 +288,7 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
             Edit Task
           </button>
           <button
-            onClick={() => {
-              onDelete(task._id!);
-              onClose();
-            }}
+            onClick={() => { onDelete(task._id!); onClose(); }}
             className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
           >
             Delete Task

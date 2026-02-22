@@ -1,7 +1,7 @@
 const Task = require('../models/Task');
 const User = require('../models/User');
 const { sendDueDateReminder } = require('./emailService');
-const { checkAndGenerateRecurringTasks } = require('./recurrenceService');
+const { checkAndGenerateRecurringTasks } = require('./recurringTaskService');
 
 const checkDueTasks = async () => {
   try {

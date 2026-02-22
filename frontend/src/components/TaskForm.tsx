@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Task, TaskStatus, TaskPriority, TaskCategory } from '../types/task';
+import { Task, TaskStatus, TaskPriority, TaskCategory, RecurringPattern } from '../types/task';
 
 interface TaskFormProps {
   task?: Task | null;
@@ -17,9 +17,14 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
     labels: [] as string[],
     attachments: [] as any[],
     comments: [] as any[],
-    substask: [] as any[],
+    subtasks: [] as any[],
     history: [] as any[],
     dueDate: '',
+    // Recurring fields
+    isRecurring: false,
+    recurringPattern: 'none' as RecurringPattern,
+    recurringInterval: 1,
+    recurringEndDate: '',
   });
   const [newLabel, setNewLabel] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -35,9 +40,13 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
         labels: task.labels || [],
         attachments: task.attachments || [],
         comments: task.comments || [],
-        substask: task.subtasks || [],
+        subtasks: task.subtasks || [],
         history: task.history || [],
         dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
+        isRecurring: task.isRecurring || false,
+        recurringPattern: task.recurringPattern || 'none',
+        recurringInterval: task.recurringInterval || 1,
+        recurringEndDate: task.recurringEndDate ? task.recurringEndDate.split('T')[0] : '',
       });
     }
   }, [task]);
@@ -56,8 +65,12 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
       subtasks: [],
       history: [],
       dueDate: formData.dueDate,
+      isRecurring: formData.isRecurring,
+      recurringPattern: formData.isRecurring ? formData.recurringPattern : 'none',
+      recurringInterval: formData.recurringInterval,
+      recurringEndDate: formData.recurringEndDate || undefined,
     }, selectedFiles);
-    
+
     setFormData({
       title: '',
       description: '',
@@ -67,41 +80,48 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
       labels: [],
       attachments: [],
       comments: [],
-      substask: [],
+      subtasks: [],
       history: [],
       dueDate: '',
+      isRecurring: false,
+      recurringPattern: 'none',
+      recurringInterval: 1,
+      recurringEndDate: '',
     });
     setSelectedFiles([]);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
+    });
+  };
+
+  const handleRecurringToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = e.target.checked;
+    setFormData({
+      ...formData,
+      isRecurring: checked,
+      recurringPattern: checked ? 'weekly' : 'none',
     });
   };
 
   const addLabel = () => {
     if (newLabel.trim() && !formData.labels.includes(newLabel.trim())) {
-      setFormData({
-        ...formData,
-        labels: [...formData.labels, newLabel.trim()],
-      });
+      setFormData({ ...formData, labels: [...formData.labels, newLabel.trim()] });
       setNewLabel('');
     }
   };
 
   const removeLabel = (labelToRemove: string) => {
-    setFormData({
-      ...formData,
-      labels: formData.labels.filter(label => label !== labelToRemove),
-    });
+    setFormData({ ...formData, labels: formData.labels.filter(l => l !== labelToRemove) });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const filesArray = Array.from(e.target.files);
-      setSelectedFiles([...selectedFiles, ...filesArray]);
+      setSelectedFiles([...selectedFiles, ...Array.from(e.target.files)]);
     }
   };
 
@@ -126,11 +146,11 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
   };
 
   const categoryIcons: Record<TaskCategory, string> = {
-    work: '💼',
-    personal: '👤',
-    shopping: '🛒',
-    health: '🏥',
-    other: '📌',
+    work: '💼', personal: '👤', shopping: '🛒', health: '🏥', other: '📌',
+  };
+
+  const patternLabels: Record<string, string> = {
+    daily: 'Day(s)', weekly: 'Week(s)', monthly: 'Month(s)',
   };
 
   return (
@@ -138,8 +158,9 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
       <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
         {task ? 'Edit Task' : 'Create New Task'}
       </h2>
-      
+
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Title */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Title *
@@ -155,6 +176,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
           />
         </div>
 
+        {/* Description */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Description
@@ -169,6 +191,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
           />
         </div>
 
+        {/* Category & Due Date */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -187,7 +210,6 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
               <option value="other">{categoryIcons.other} Other</option>
             </select>
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Due Date
@@ -202,6 +224,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
           </div>
         </div>
 
+        {/* Status & Priority */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -218,7 +241,6 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
               <option value="done">Done</option>
             </select>
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Priority
@@ -236,6 +258,107 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
           </div>
         </div>
 
+        {/* ── Recurring Section ── */}
+        <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-4">
+          {/* Toggle */}
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                🔁 Recurring Task
+              </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Automatically create a new task when this one is completed
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.isRecurring}
+                onChange={handleRecurringToggle}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+
+          {/* Recurring options – only shown when toggled on */}
+          {formData.isRecurring && (
+            <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-gray-700">
+              {/* Pattern */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Repeat
+                </label>
+                <select
+                  name="recurringPattern"
+                  value={formData.recurringPattern}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </div>
+
+              {/* Interval */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Every
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    name="recurringInterval"
+                    value={formData.recurringInterval}
+                    onChange={handleChange}
+                    min={1}
+                    max={365}
+                    className="w-24 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                  />
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    {patternLabels[formData.recurringPattern] ?? 'Unit(s)'}
+                  </span>
+                </div>
+              </div>
+
+              {/* End Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  End Date <span className="font-normal text-gray-400">(optional)</span>
+                </label>
+                <input
+                  type="date"
+                  name="recurringEndDate"
+                  value={formData.recurringEndDate}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Leave blank to repeat indefinitely
+                </p>
+              </div>
+
+              {/* Summary pill */}
+              <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                <span className="text-blue-500 text-lg">🔁</span>
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  Repeats{' '}
+                  <strong>
+                    {formData.recurringInterval === 1
+                      ? formData.recurringPattern
+                      : `every ${formData.recurringInterval} ${patternLabels[formData.recurringPattern]?.toLowerCase() ?? 'units'}`}
+                  </strong>
+                  {formData.recurringEndDate && (
+                    <> until <strong>{new Date(formData.recurringEndDate).toLocaleDateString()}</strong></>
+                  )}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Labels */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Labels
@@ -264,11 +387,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
                 className="px-3 py-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full text-sm flex items-center gap-2"
               >
                 {label}
-                <button
-                  type="button"
-                  onClick={() => removeLabel(label)}
-                  className="text-purple-600 dark:text-purple-300 hover:text-purple-800 dark:hover:text-purple-100"
-                >
+                <button type="button" onClick={() => removeLabel(label)} className="text-purple-600 dark:text-purple-300 hover:text-purple-800 dark:hover:text-purple-100">
                   ×
                 </button>
               </span>
@@ -276,6 +395,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
           </div>
         </div>
 
+        {/* Attachments */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Attachments
@@ -290,8 +410,6 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
             Max 5MB per file. Supported: Images, PDF, Word, Excel, Text
           </p>
-
-          {/* Selected files preview */}
           {selectedFiles.length > 0 && (
             <div className="mt-3 space-y-2">
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -306,11 +424,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
                       <p className="text-xs text-gray-500 dark:text-gray-400">{formatFileSize(file.size)}</p>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => removeSelectedFile(index)}
-                    className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
-                  >
+                  <button type="button" onClick={() => removeSelectedFile(index)} className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300">
                     ✕
                   </button>
                 </div>
@@ -319,6 +433,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
           )}
         </div>
 
+        {/* Actions */}
         <div className="flex gap-3 pt-4">
           <button
             type="submit"

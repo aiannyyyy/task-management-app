@@ -66,8 +66,7 @@ const historySchema = new mongoose.Schema({
       'subtask_deleted',
       'label_added',
       'label_removed',
-      'recurrence_added',
-      'recurrence_removed'
+      'recurring_updated'
     ]
   },
   field: {
@@ -86,29 +85,6 @@ const historySchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
-  }
-});
-
-const recurrenceSchema = new mongoose.Schema({
-  frequency: {
-    type: String,
-    enum: ['daily', 'weekly', 'monthly', 'yearly'],
-    required: true
-  },
-  interval: {
-    type: Number,
-    default: 1,
-    min: 1
-  },
-  daysOfWeek: {
-    type: [Number], // 0 = Sunday, 1 = Monday, etc.
-    default: []
-  },
-  endDate: {
-    type: Date
-  },
-  lastGenerated: {
-    type: Date
   }
 });
 
@@ -176,12 +152,28 @@ const taskSchema = new mongoose.Schema({
   dueDate: {
     type: Date
   },
-  recurrence: recurrenceSchema,
+  // Recurring task fields
   isRecurring: {
     type: Boolean,
     default: false
   },
-  parentTask: {
+  recurringPattern: {
+    type: String,
+    enum: ['daily', 'weekly', 'monthly', 'none'],
+    default: 'none'
+  },
+  recurringInterval: {
+    type: Number,
+    default: 1, // Every 1 day/week/month
+    min: 1
+  },
+  recurringEndDate: {
+    type: Date
+  },
+  lastRecurredDate: {
+    type: Date
+  },
+  parentTaskId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Task'
   }
