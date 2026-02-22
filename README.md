@@ -28,6 +28,10 @@ A full-stack task management application for creating, organizing, and tracking 
 - MongoDB (database)  
 - Docker support
 
+### TEST (ONGOING)
+- JEST
+- SUPERTEST
+
 ## 🔧 Prerequisites
 
 Before running locally, make sure you have the following installed:
