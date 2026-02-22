@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent,
   PointerSensor, useSensor, useSensors, useDroppable, useDraggable,
@@ -45,6 +45,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
+  // ✅ Defined with useCallback BEFORE the useEffect that references it
+  const fetchWorkspaces = useCallback(async () => {
+    try {
+      const data = await workspaceService.getAll();
+      setWorkspaces(data);
+    } catch (error) {
+      console.error('Failed to fetch workspaces:', error);
+    }
+  }, []);
+
   useEffect(() => {
     const savedDarkMode = localStorage.getItem('darkMode') === 'true';
     setDarkMode(savedDarkMode);
@@ -55,15 +65,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   useEffect(() => {
     fetchTasks();
   }, [activeWorkspace]);
-
-  const fetchWorkspaces = async () => {
-    try {
-      const data = await workspaceService.getAll();
-      setWorkspaces(data);
-    } catch (error) {
-      console.error('Failed to fetch workspaces:', error);
-    }
-  };
 
   const fetchTasks = async () => {
     try {
@@ -312,7 +313,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
               </div>
             </div>
 
-            {/* Search / filter / sort row — unchanged */}
+            {/* Search / filter / sort row */}
             <div className="mb-6 space-y-4">
               <div className="flex gap-4 flex-wrap">
                 <div className="flex-1 min-w-[200px]">
