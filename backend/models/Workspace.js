@@ -84,12 +84,18 @@ workspaceSchema.methods.createInviteToken = function () {
 
 // Helper: check if a user is a member
 workspaceSchema.methods.isMember = function (userId) {
-  return this.members.some((m) => m.user.toString() === userId.toString());
+  return this.members.some((m) => {
+    const memberId = m.user._id || m.user;
+    return memberId.toString() === userId.toString();
+  });
 };
 
 // Helper: get a member's role
 workspaceSchema.methods.getMemberRole = function (userId) {
-  const member = this.members.find((m) => m.user.toString() === userId.toString());
+  const member = this.members.find((m) => {
+    const memberId = m.user._id || m.user;
+    return memberId.toString() === userId.toString();
+  });
   return member ? member.role : null;
 };
 
