@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Task } from '../types/task';
 import { taskService } from '../services/api';
+import { WorkspaceMember } from '../types/workspace';
 import Comments from './Comments';
 import Subtasks from './Subtasks';
 import TaskHistory from './TaskHistory';
@@ -16,6 +17,7 @@ interface TaskDetailsProps {
   onAddSubtask: (taskId: string, text: string) => void;
   onToggleSubtask: (taskId: string, subtaskId: string, completed: boolean) => void;
   onDeleteSubtask: (taskId: string, subtaskId: string) => void;
+  workspaceMembers?: WorkspaceMember[];
 }
 
 const TaskDetails: React.FC<TaskDetailsProps> = ({
@@ -29,7 +31,10 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
   onAddSubtask,
   onToggleSubtask,
   onDeleteSubtask,
+  workspaceMembers = [],
 }) => {
+  const [assigning, setAssigning] = useState(false);
+  const [localAssignee, setLocalAssignee] = useState(task.assignedTo);
   const priorityColors = {
     low: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
     medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
@@ -70,6 +75,18 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleAssign = async (userId: string | null) => {
+    setAssigning(true);
+    try {
+      const updated = await taskService.assignTask(task._id!, userId);
+      setLocalAssignee(updated.assignedTo);
+    } catch (err) {
+      console.error('Failed to assign task', err);
+    } finally {
+      setAssigning(false);
+    }
   };
 
   const getRecurringSummary = (): string => {
@@ -154,6 +171,51 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
                   weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
                 })}
               </p>
+            </div>
+          )}
+
+          {/* ── Assigned To ── */}
+          {workspaceMembers.length > 0 && (
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">👤 Assigned To</h3>
+              {localAssignee ? (
+                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                      {((localAssignee as any).name ?? '?').charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {(localAssignee as any).name ?? 'Team member'}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {(localAssignee as any).email ?? ''}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleAssign(null)}
+                    disabled={assigning}
+                    className="text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50"
+                  >
+                    Unassign
+                  </button>
+                </div>
+              ) : (
+                <select
+                  onChange={e => handleAssign(e.target.value || null)}
+                  disabled={assigning}
+                  defaultValue=""
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm"
+                >
+                  <option value="">— Assign to a team member —</option>
+                  {workspaceMembers.map(member => (
+                    <option key={member.user._id} value={member.user._id}>
+                      {member.user.name} · {member.role}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           )}
 

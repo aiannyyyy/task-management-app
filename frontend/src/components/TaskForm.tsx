@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Task, TaskStatus, TaskPriority, TaskCategory, RecurringPattern } from '../types/task';
+import { WorkspaceMember } from '../types/workspace';
 
 interface TaskFormProps {
   task?: Task | null;
   onSubmit: (task: Omit<Task, '_id' | 'createdAt' | 'updatedAt'>, files?: File[]) => void;
   onCancel: () => void;
+  workspaceMembers?: WorkspaceMember[];
 }
 
-const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
+const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel, workspaceMembers = [] }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -25,6 +27,8 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
     recurringPattern: 'none' as RecurringPattern,
     recurringInterval: 1,
     recurringEndDate: '',
+    // Team
+    assignedTo: '',
   });
   const [newLabel, setNewLabel] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -47,6 +51,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
         recurringPattern: task.recurringPattern || 'none',
         recurringInterval: task.recurringInterval || 1,
         recurringEndDate: task.recurringEndDate ? task.recurringEndDate.split('T')[0] : '',
+        assignedTo: task.assignedTo ? ((task.assignedTo as any)?._id ?? task.assignedTo as string) : '',
       });
     }
   }, [task]);
@@ -69,6 +74,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
       recurringPattern: formData.isRecurring ? formData.recurringPattern : 'none',
       recurringInterval: formData.recurringInterval,
       recurringEndDate: formData.recurringEndDate || undefined,
+      assignedTo: formData.assignedTo || undefined,
     }, selectedFiles);
 
     setFormData({
@@ -87,6 +93,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
       recurringPattern: 'none',
       recurringInterval: 1,
       recurringEndDate: '',
+      assignedTo: '',
     });
     setSelectedFiles([]);
   };
@@ -357,6 +364,28 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
             </div>
           )}
         </div>
+
+        {/* Assign To — only shown in workspace context */}
+        {workspaceMembers.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              👤 Assign To
+            </label>
+            <select
+              name="assignedTo"
+              value={formData.assignedTo}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            >
+              <option value="">— Unassigned —</option>
+              {workspaceMembers.map(member => (
+                <option key={member.user._id} value={member.user._id}>
+                  {member.user.name} · {member.role}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Labels */}
         <div>

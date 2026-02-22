@@ -46,6 +46,9 @@ export interface Task {
   subtasks: Subtask[];
   history: HistoryEntry[];
   dueDate?: string;
+  // Team collaboration
+  assignedTo?: string | { _id: string; name: string; email: string };
+  workspace?: string;
   // Recurring fields
   isRecurring?: boolean;
   recurringPattern?: 'daily' | 'weekly' | 'monthly' | 'none';
