@@ -36,3 +36,7 @@ mongo_data/
 
 # Testing
 coverage/
+
+# Uploads
+uploads/
+*/uploads/
