@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import Login from './components/Login';
 import Register from './components/Register';
 import AcceptInvite from './components/AcceptInvite';
+import DemoBanner from './components/DemoBanner';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -25,6 +26,8 @@ function App() {
   const isInvitePage = window.location.pathname === '/accept-invite' || window.location.search.includes('token=');
   if (isInvitePage) {
     return (
+      <>
+      <DemoBanner />
       <AcceptInvite
         onGoToDashboard={() => {
           window.history.replaceState({}, '', '/');
@@ -35,18 +38,29 @@ function App() {
           setIsAuthenticated(false);
         }}
       />
+      </>
     );
   }
 
   if (!isAuthenticated) {
-    return showRegister ? (
-      <Register onRegister={handleRegister} onSwitchToLogin={() => setShowRegister(false)} />
-    ) : (
-      <Login onLogin={handleLogin} onSwitchToRegister={() => setShowRegister(true)} />
+    return (
+      <>
+        <DemoBanner />
+        {showRegister ? (
+          <Register onRegister={handleRegister} onSwitchToLogin={() => setShowRegister(false)} />
+        ) : (
+          <Login onLogin={handleLogin} onSwitchToRegister={() => setShowRegister(true)} />
+        )}
+      </>
     );
   }
 
-  return <Dashboard onLogout={handleLogout} />;
+  return (
+    <>
+      <DemoBanner />
+      <Dashboard onLogout={handleLogout} />
+    </>
+  );
 }
 
 export default App;

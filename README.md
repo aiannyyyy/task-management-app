@@ -37,8 +37,15 @@ A full-stack task management application for creating, organizing, and tracking 
 - RAILWAY
 - VERCEL
 
-### LINK TRY
-- Contact Me if you want to try my test link of the task management app
+### LIVE DEMO
+- Try it with sample data, no sign-up: open the demo link on my portfolio.
+
+## Demo mode
+
+Set `REACT_APP_USE_MOCKS=true` when building the frontend. The app then opens signed in as a
+sample user and answers every API call in the browser (`frontend/src/mocks`), so it needs no
+backend or database. Changes stay in the browser tab and reset on refresh. Without the variable,
+nothing changes.
 
 ## 🔧 Prerequisites
 
