@@ -2,6 +2,8 @@ import axios from 'axios';
 import { Task } from '../types/task';
 import { Workspace, CreateWorkspaceData } from '../types/workspace';
 import { authService } from './authService';
+import { applyMockAdapter, mockAttachmentUrl } from '../mocks/mockAdapter';
+import { isMockMode } from '../mocks/config';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -11,6 +13,8 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+applyMockAdapter(api);
 
 // Add token to requests
 api.interceptors.request.use(
@@ -105,6 +109,7 @@ export const taskService = {
   },
 
   getAttachmentUrl: (taskId: string, filename: string): string => {
+    if (isMockMode()) return mockAttachmentUrl(filename);
     return `${API_URL}/api/tasks/${taskId}/attachments/${filename}`;
   },
 
